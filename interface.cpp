@@ -463,7 +463,7 @@ void Interface::processCloseCommand()
 	QByteArray data;
 	if(m_openState == O_SAVE or m_openState == O_SAVE_REPLACE or m_openState == O_FILE) {
 		// Small 'n' means last operation was a save operation.
-		data.append(m_openState == O_SAVE or m_openState == O_SAVE_REPLACE ? 'n' : 'N').append((char)name.length()).append(name);
+		data.append(m_openState == O_SAVE or m_openState == O_SAVE_REPLACE ? 'n' : 'N').append((char)name.length()).append(name.toLatin1());
 		if(0 not_eq m_pListener) // notify UI listener of change.
 			m_pListener->fileClosed(name);
 		Log(FAC_IFACE, info, QString("Close: Returning last opened file name: %1").arg(name));
@@ -559,7 +559,7 @@ QString Interface::errorStringFromCode(CBM::IOErrorMessage code) const
 {
 	// Assume not found by pre-assigning the unknown message.
 	foreach(const QString& msg, s_IOErrorMessages)
-		if(code == msg.split(',', QString::KeepEmptyParts).first().toInt())	// found it!
+		if(code == msg.split(',').first().toInt())	// found it!
 			return msg;
 
 	return s_unknownMessage;
@@ -573,7 +573,7 @@ void Interface::processErrorStringRequest(CBM::IOErrorMessage code)
 	QByteArray retStr(1, ':');
 
 	// append message and the common ending and terminate with CR.
-	write(retStr.append(errorStringFromCode(code) + s_errorEnding + '\r'));
+	write(retStr.append((errorStringFromCode(code) + s_errorEnding + '\r').toLatin1()));
 } // processErrorStringRequest
 
 

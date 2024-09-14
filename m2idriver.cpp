@@ -18,7 +18,6 @@
 #include <math.h>
 #include <QTextStream>
 #include <QFileInfo>
-#include <QRegExp>
 #include <QDir>
 
 #include "m2idriver.hpp"
@@ -196,7 +195,7 @@ bool M2I::deleteFile(const QString& fileName)
 				if(result) {
 					result = m_hostFile.open(QFile::WriteOnly);
 					if(result) {
-						m_hostFile.write(QByteArray().append(generateFile()));
+						m_hostFile.write(QByteArray().append(generateFile().toLatin1()));
 						m_hostFile.close();
 					}
 					else
@@ -230,7 +229,7 @@ CBM::IOErrorMessage M2I::renameFile(const QString& oldName, const QString& newNa
 		if(f.rename(modEntry.nativeName)) {
 			// operation succeeded, so rewrite the updated M2I index file.
 			if(m_hostFile.open(QFile::WriteOnly)) {
-				m_hostFile.write(QByteArray().append(generateFile()));
+				m_hostFile.write(QByteArray().append(generateFile().toLatin1()));
 				m_hostFile.close();
 				ret = CBM::ErrOK;
 			}
@@ -265,7 +264,7 @@ CBM::IOErrorMessage M2I::newDisk(const QString& name, const QString& id)
 	if(not success)
 		return CBM::ErrWriteProtectOn;
 
-	file.write(QByteArray().append(generateFile()));
+	file.write(QByteArray().append(generateFile().toLatin1()));
 	file.close();
 	// remount if the file we have mounted is this one!
 	if(not file.fileName().compare(m_hostFile.fileName(), Qt::CaseInsensitive))
@@ -316,7 +315,7 @@ CBM::IOErrorMessage M2I::fopenWrite(const QString& fileName, bool replaceMode)
 			e.fileType = FileEntry::TypePrg;
 			e.nativeName = fileName;
 			m_entries.append(e);
-			m_hostFile.write(QByteArray().append(generateFile()));
+			m_hostFile.write(QByteArray().append(generateFile().toLatin1()));
 			m_hostFile.close();
 		}
 		else
@@ -394,10 +393,10 @@ bool M2I::findEntry(const QString& findName, FileEntry& entry, bool allowWildcar
 {
 	const QString trimmedFind(findName.trimmed());
 	// trimming here is mostly for disregarding any ending blanks.
-	QRegExp matcher(trimmedFind, Qt::CaseInsensitive, QRegExp::Wildcard);
+	QRegularExpression matcher = QRegularExpression::fromWildcard(trimmedFind, Qt::CaseInsensitive);
 	bool found = false;
 	foreach(const FileEntry& e, m_entries) {
-		if(/*FileEntry::TypePrg == e.fileType and */allowWildcards ? matcher.exactMatch(e.cbmName.trimmed())
+		if(/*FileEntry::TypePrg == e.fileType and */allowWildcards ? matcher.match(e.cbmName.trimmed()).hasMatch()
 			 : 0 == trimmedFind.compare(e.cbmName, Qt::CaseInsensitive)) {
 			entry = e;
 			found = true;

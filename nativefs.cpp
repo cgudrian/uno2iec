@@ -162,7 +162,7 @@ bool NativeFS::sendListing(ISendLine& cb)
 	dirName.truncate(23);
 	dirName = dirName.leftJustified(23);
 
-	QStringList filters = m_filters.split(',', QString::SkipEmptyParts);
+	QStringList filters = m_filters.split(',');
 
 	QString line("\x12\""); // Invert face, "
 	QString diskLabel("NATIVE FS");

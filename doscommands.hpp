@@ -25,11 +25,11 @@ public:
 	virtual const QString full() = 0;
 	// If this one returns a normal character, like ':', it specifies the ending of the command and
 	// where the actual parameters begin. If is returns zero (base default) the command has NO parameters.
-	// If it returns a QChar in the valuerange 1 - 31 it specifies the number of expected raw parameter
+	// If it returns a char in the valuerange 1 - 31 it specifies the number of expected raw parameter
 	// bytes following right after the command itself.
-	virtual const QChar delimeter()
+	virtual const char delimeter()
 	{
-		return QChar();
+		return 0;
 	}
 
 	// perform the actual processing of the command itself.
@@ -56,7 +56,7 @@ public:
 		const QString cmdString(cmdArray);
 		foreach(Command* cmd, s_attached) {
 			QStringList variants(cmd->full().split('|'));
-			if(cmd->delimeter().isNull()) {
+			if(cmd->delimeter() == 0) {
 				bool isFirst = true;
 				foreach (const QString& v, variants) {
 					if(cmdString.startsWith(v, isFirst ? Qt::CaseSensitive : Qt::CaseInsensitive)) {
@@ -68,7 +68,7 @@ public:
 				}
 			}
 			else {
-				QList<QByteArray> splits(cmdArray.split(cmd->delimeter().toLatin1()));
+				QList<QByteArray> splits(cmdArray.split(cmd->delimeter()));
 				if(not splits.isEmpty()) {
 					foreach (const QString& v, variants) {
 						if(splits.first() == v) {
@@ -116,7 +116,7 @@ protected:
 	virtual void attachMe() {}
 	static bool isIllegalCBMName(const QString& name)
 	{
-		return name.indexOf(QRegExp("m[=\"*?,]")) not_eq -1;
+		return name.indexOf(QRegularExpression("m[=\"*?,]")) not_eq -1;
 	}
 
 private:
@@ -127,20 +127,20 @@ private:
 	class NAME : public Command { \
 		public:NAME() { attach(this); } \
 		const QString full() { return FULL; } \
-		const QChar delimeter() { return DELIM; } \
+		const char delimeter() { return DELIM; } \
 		CBM::IOErrorMessage process(const QByteArray& params, Interface& iface); \
 	}
 
 
 // Reset the 1541 to power-up condition.
 // Syntax: "INITIALIZE"
-DECLARE_DOSCMD_IMPL(InitDrive, "INITIALIZE|I|UJ|I0", QChar());
+DECLARE_DOSCMD_IMPL(InitDrive, "INITIALIZE|I|UJ|I0", 0);
 
 // Reset the 1541 to power-up condition.
 // Syntax: "VALIDATE"
 // Validate will fix inconsistencies that can be caused by files that where opened but never closed.
 // Beware: Validate also erases all random files!
-DECLARE_DOSCMD_IMPL(ValidateDisk, "VALIDATE|V|V0", QChar());
+DECLARE_DOSCMD_IMPL(ValidateDisk, "VALIDATE|V|V0", 0);
 
 
 // Format a floppy disk
@@ -169,7 +169,7 @@ DECLARE_DOSCMD_IMPL(CopyFiles, "COPY|C|C0", ':');
 
 // Set Position - Change the Read/Write Position in a Relative File
 // Syntax: "P"+CHR$(Channel)+CHR$(RecLow)+CHR$(RecHi)+CHR$(Pos)
-DECLARE_DOSCMD_IMPL(SetPosition, "POSITION|P", QChar());
+DECLARE_DOSCMD_IMPL(SetPosition, "POSITION|P", 0);
 
 // BLOCK-READ - Read a Disk Block into the internal floppy RAM
 // Abbreviation: U1 (superseded by USER1, U1)
@@ -191,13 +191,13 @@ DECLARE_DOSCMD_IMPL(BlockWrite, "B-W|U2", ':');
 // MEMORY-READ - Read Data from the floppy RAM
 // Abbreviation: M-R (You must use the abbreviation, the full form is not legal).
 // Syntax: "M-R"+CHR$(LowAddress)+CHR$(HighAddress)+CHR$(Size)
-DECLARE_DOSCMD_IMPL(MemoryRead, "M-R", QChar());
+DECLARE_DOSCMD_IMPL(MemoryRead, "M-R", 0);
 
 
 // MEMORY-WRITE - Write Data to the floppy RAM
 // Abbreviation: M-W (You must use the abbreviation, the full form is not legal).
 // Syntax: "M-W"+CHR$(LowAddress)+CHR$(HighAddress)+CHR$(Size)+payload[Size]
-DECLARE_DOSCMD_IMPL(MemoryWrite, "M-W", QChar());
+DECLARE_DOSCMD_IMPL(MemoryWrite, "M-W", 0);
 
 
 // BUFFER-POINTER - Set the pointer for a buffered block
@@ -229,14 +229,14 @@ DECLARE_DOSCMD_IMPL(BlockExecute, "BLOCK-EXECUTE|B-E", ':');
 // Syntax: "M-E"+CHR$(LowAddress)+CHR$(HighAddress)
 // Note: Memory Execute obviously requires the complete emulation of the MOS 6502 CPU in the 1541.
 // This is the place to check if a turbo loader should be enabled.
-DECLARE_DOSCMD_IMPL(MemoryExecute, "M-E|USER3|U3|USER4|U4|USER5|U5|USER6|U6|USER7|U7", QChar());
+DECLARE_DOSCMD_IMPL(MemoryExecute, "M-E|USER3|U3|USER4|U4|USER5|U5|USER6|U6|USER7|U7", 0);
 
 
 // USERI - Switch the C1541 between C64 to VC20 mode
 // Abbreviation: UI
 // Syntax: "UI+" or "UI-"
 // This is a dummy function in Power64. It causes a slight adjustment of transfer speeds on a real C1541.
-DECLARE_DOSCMD_IMPL(VC20ModeOnOff, "USERI|UI", QChar());
+DECLARE_DOSCMD_IMPL(VC20ModeOnOff, "USERI|UI", 0);
 
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -245,7 +245,7 @@ DECLARE_DOSCMD_IMPL(VC20ModeOnOff, "USERI|UI", QChar());
 
 // U0>
 // Syntax: "U0>"+CHR$(new address)
-DECLARE_DOSCMD_IMPL(DeviceAddress, "U0>", QChar());
+DECLARE_DOSCMD_IMPL(DeviceAddress, "U0>", 0);
 
 
 // CD is also used to mount/unmount image files. Just change into them
@@ -263,17 +263,17 @@ DECLARE_DOSCMD_IMPL(DeviceAddress, "U0>", QChar());
 //  CD//foo      changes into \foo
 //  CD/foo/:bar  changes into foo\bar
 //  CD/foo/bar   dito
-DECLARE_DOSCMD_IMPL(ChangeDirectory, "CHDIR|CD", QChar());
+DECLARE_DOSCMD_IMPL(ChangeDirectory, "CHDIR|CD", 0);
 
 // MD uses a syntax similiar to CD and will create the directory listed
 // after the colon (:) relative to any directory listed before it.
 //  MD/foo/:bar  creates bar in foo
 //  MD//foo/:bar creates bar in \foo
-DECLARE_DOSCMD_IMPL(MakeDirectory, "MAKEDIR|MD", QChar());
+DECLARE_DOSCMD_IMPL(MakeDirectory, "MAKEDIR|MD", 0);
 
 // RD can only remove subdirectories of the current directory.
 // RD:foo       deletes foo
-DECLARE_DOSCMD_IMPL(RemoveDirectory, "RMDIR|RD", QChar());
+DECLARE_DOSCMD_IMPL(RemoveDirectory, "RMDIR|RD", 0);
 
 
 // PARTITION - Create or Select a Partition on a 1581 floppy disk

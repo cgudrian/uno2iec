@@ -56,7 +56,7 @@ CBM::IOErrorMessage ValidateDisk::process(const QByteArray& params, Interface& i
 CBM::IOErrorMessage NewDisk::process(const QByteArray &params, Interface &iface)
 {
 	CBM::IOErrorMessage result;
-	QStringList newParams(QString(params).split(',', QString::SkipEmptyParts));
+	QStringList newParams(QString(params).split(','));
 
 	if(newParams.empty() or newParams.count() > 2)
 		return CBM::ErrSyntaxError;

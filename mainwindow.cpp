@@ -37,6 +37,7 @@
 #include <QDebug>
 #include <QSettings>
 #include <QTimer>
+#include <QActionGroup>
 #ifdef HAS_WIRINGPI
 #include <wiringPi.h>
 #endif
@@ -57,9 +58,9 @@ namespace {
 EmulatorPaletteMap emulatorPalettes;
 CbmMachineThemeMap machineThemes;
 
-const QString OkString = "OK>%1|%2|%3|%4|%5|%6|%7.%8\r";
-const QString NOkString = "NOK>\r";
-const QString ConnectionString = "connect_arduino:";
+const QLatin1String OkString{"OK>%1|%2|%3|%4|%5|%6|%7.%8\r"};
+const QLatin1String NOkString{"NOK>\r"};
+const QLatin1String ConnectionString{"connect_arduino:"};
 const QColor logLevelColors[] = { QColor(Qt::red), QColor("orange"), QColor(Qt::blue), QColor(Qt::darkGreen) };
 
 QStringList IMAGE_LIST_HEADERS = (QStringList()
@@ -505,7 +506,7 @@ bool MainWindow::checkConnectRequest(QByteArray& buffer)
 		m_pendingBuffer.clear();
 		m_unexpectedBuffer.clear();
 		// Negative response, make it stop connection attempts.
-		m_port.write(NOkString.toLatin1().data());
+		m_port.write(NOkString.data());
 		return false;
 	}
 
@@ -732,12 +733,12 @@ void MainWindow::onCommandIssued(const QString& cmd)
 		if(params.isEmpty()) {
 			// Display (and clear) the disk drive status
 			m_simulatedState = simsDriveStat;
-			simulateData(QByteArray().append(QChar('O')).append(3).append(CBM::CMD_CHANNEL));
+			simulateData(QByteArray().append('O').append(3).append(CBM::CMD_CHANNEL));
 		}
 		else if("$" == params) {
 			// "Display the disk directory without overwriting the BASIC program in memory"
 			m_simulatedState = simsOpenResponse;
-			simulateData(QByteArray().append(QChar('O')).append(3 + params.length()).append(CBM::READPRG_CHANNEL).append(params.toLocal8Bit()));
+			simulateData(QByteArray().append('O').append(3 + params.length()).append(CBM::READPRG_CHANNEL).append(params.toLocal8Bit()));
 		}
 		else {
 			// Execute a disk drive command (e.g. S0:filename, V0:, I0:)
@@ -747,7 +748,7 @@ void MainWindow::onCommandIssued(const QString& cmd)
 				params.append(0x30);
 				params.append("ARNE BJARNE_    0123456789ABCDEFG");
 			}
-			delayedSimNoResponse(simsDriveCmd, QByteArray().append(QChar('O')).append(3 + params.length()).append(CBM::CMD_CHANNEL).append(params.toLocal8Bit()));
+			delayedSimNoResponse(simsDriveCmd, QByteArray().append('O').append(3 + params.length()).append(CBM::CMD_CHANNEL).append(params.toLocal8Bit()));
 		}
 	}
 	else if((cmd[0] == '/' or cmd[0] == '%')) {
@@ -758,7 +759,7 @@ void MainWindow::onCommandIssued(const QString& cmd)
 			 m_simulatedState = simsOpenResponse;
 			 m_simFile.setFileName("simulated.prg");
 			 m_simFile.open(QIODevice::WriteOnly);
-			 simulateData(QByteArray().append(QChar('O')).append(3 + params.length()).append(CBM::READPRG_CHANNEL).append(params.toLocal8Bit()));
+			 simulateData(QByteArray().append('O').append(3 + params.length()).append(CBM::READPRG_CHANNEL).append(params.toLocal8Bit()));
 		 }
 	}
 	else if(cmd[0] == CBM_BACK_ARROW) {
@@ -766,7 +767,7 @@ void MainWindow::onCommandIssued(const QString& cmd)
 		m_simFile.setFileName("simulated.prg");
 		if(m_simFile.open(QIODevice::ReadOnly)) {
 			m_simulatedState = simsOpenSaveResponse;
-			simulateData(QByteArray().append(QChar('O')).append(3 + params.length()).append(CBM::WRITEPRG_CHANNEL).append(params.toLocal8Bit()));
+			simulateData(QByteArray().append('O').append(3 + params.length()).append(CBM::WRITEPRG_CHANNEL).append(params.toLocal8Bit()));
 		}
 	}
 	else {
@@ -1062,15 +1063,14 @@ void MainWindow::updateImageList(bool reloadDirectory)
 	if(not m_isInitialized)
 		return;
 
-	QStringList filterList = m_appSettings.imageFilters.split(',', QString::SkipEmptyParts);
+	QStringList filterList = m_appSettings.imageFilters.split(',');
 
 	if(reloadDirectory) {
 		m_infoList = QDir(m_appSettings.imageDirectory).entryInfoList(filterList, QDir::NoDot bitor QDir::Files
 																													bitor (m_appSettings.showDirectories ? QDir::AllDirs : QDir::Files),
 																													QDir::DirsFirst bitor QDir::Name);
 	}
-	QRegExp filter(ui->imageFilter->text());
-	filter.setCaseSensitivity(Qt::CaseInsensitive);
+	QRegularExpression filter(ui->imageFilter->text(), QRegularExpression::CaseInsensitiveOption);
 
 	m_filteredInfoList.clear();
 	foreach(QFileInfo file, m_infoList) {
@@ -1137,7 +1137,7 @@ void MainWindow::on_reloadImageDir_clicked()
 void MainWindow::on_dirList_doubleClicked(const QModelIndex &index)
 {
 	Q_UNUSED(index);
-	ui->mountSelected->animateClick(250);
+	ui->mountSelected->animateClick();
 	//	on_dirList_doubleClicked
 }
 
@@ -1163,8 +1163,8 @@ void MainWindow::on_mountSelected_clicked()
 
 void MainWindow::on_unmountCurrent_clicked()
 {
-	m_iface.processOpenCommand(CBM::READPRG_CHANNEL, QByteArray().append(QChar(CBM_BACK_ARROW))
-														 .append(QChar(CBM_BACK_ARROW)), true);
+	m_iface.processOpenCommand(CBM::READPRG_CHANNEL, QByteArray().append(CBM_BACK_ARROW)
+														 .append(CBM_BACK_ARROW), true);
 } // on_unmountCurrent_clicked
 
 
@@ -1198,7 +1198,7 @@ void MainWindow::imageMounted(const QString& imagePath, FileDriverBase* pFileSys
 	m_imageDirListing.clear();
 	if(pFileSystem->supportsListing() and pFileSystem->sendListing(*this)) {
 		foreach(QString line, m_imageDirListing) {
-			QStringList lineInverses = line.split('\x12', QString::SkipEmptyParts);
+			QStringList lineInverses = line.split('\x12');
 			bool rvs = false;
 			foreach(QString linePart, lineInverses) {
 				if(rvs) {
@@ -1292,7 +1292,7 @@ void MainWindow::writeTextToDirList(const QString& text, bool atCursorPos)
 	QColor bgColor, frColor, fgColor;
 	getBgFrAndFgColors(bgColor, frColor, fgColor);
 	QTextCursor c = ui->imageDirList->textCursor();
-	QStringList lines = text.split(QRegExp("[\r\n]"), QString::KeepEmptyParts);
+	QStringList lines = text.split(QRegularExpression("[\r\n]"));
 	if(not atCursorPos)
 		c.movePosition(QTextCursor::End);
 	foreach(QString line, lines) {
@@ -1300,7 +1300,7 @@ void MainWindow::writeTextToDirList(const QString& text, bool atCursorPos)
 		c.select(QTextCursor::LineUnderCursor);
 
 		// handle parts of string: Might have reverse video chars!
-		QStringList lineInverses = line.split('\x12', QString::SkipEmptyParts);
+		QStringList lineInverses = line.split('\x12');
 		bool rvs = false;
 		foreach(QString linePart, lineInverses) {
 			QTextCharFormat fmt(c.charFormat());

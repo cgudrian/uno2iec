@@ -69,7 +69,7 @@ private:
 		QString cbmName;		// 16 chars padded with spaces.
 
 		// Needed for QList::removeOne
-		bool operator==(const FileEntry& rhs)
+		bool operator==(const FileEntry& rhs) const
 		{
 			return this->fileType == rhs.fileType and this->nativeName == rhs.nativeName and this->cbmName == rhs.cbmName;
 		}

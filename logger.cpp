@@ -31,7 +31,7 @@ void Logger::log(const QString& facility, const QString& message, LogLevelE leve
 									 QTime::currentTime().toString(" hh:mm:ss:zzz"));
 
 	// The logging levels are: [E]RROR [W]ARNING [I]NFORMATION [S]UCCESS.
-	QString levelFacility(QString("EWIS")[level] + " " + facility);
+	QString levelFacility(QString("EWIS")[level] + QStringLiteral(" ") + facility);
 
 	foreach(ILogTransport* transport, m_transports) {
 		transport->appendTime(dateTime);
